@@ -1,0 +1,42 @@
+name: Daily Commit
+
+# Allow both schedule and manual trigger
+on:
+  schedule:
+    - cron: '30 3 * * *'   # runs daily at 03:30 UTC (convert to your timezone; see notes)
+  workflow_dispatch: {}    # allows manual run from the Actions UI
+
+# Allow the workflow to push commits
+permissions:
+  contents: write
+
+jobs:
+  daily-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit by 24f2003458@ds.study.iitm.ac.in - write timestamp
+        run: |
+          # Make a change that will always vary so commits are created
+          mkdir -p .github/daily-logs
+          echo "Last run (UTC): $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .github/daily-logs/daily-commit.txt
+          git add .github/daily-logs/daily-commit.txt
+          # only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "Automated daily commit: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            git push origin HEAD:${{ github.ref_name }}
+            # print commit SHA for verification
+            echo "Committed:"
+            git --no-pager log -1 --pretty=format:"%H %cI %s"
+          else
+            echo "No changes to commit."
+          fi
